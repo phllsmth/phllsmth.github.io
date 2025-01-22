@@ -1,0 +1,293 @@
+
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <title>Geotiming Test</title>
+      <style>
+          body {
+              margin: 0;
+              padding: 15px;
+              font-family: Arial, sans-serif;
+          }
+
+          .container {
+              display: flex;
+              flex-direction: column;
+              max-width: 100%;
+              gap: 20px;
+          }
+
+          .controls {
+              display: flex;
+              flex-wrap: wrap;
+              gap: 15px;
+              align-items: center;
+          }
+
+          .control-item {
+              display: flex;
+              align-items: center;
+              gap: 5px;
+          }
+
+          input[type="number"] {
+              width: 100px;
+              padding: 5px;
+          }
+
+          button {
+              padding: 8px 16px;
+              border-radius: 4px;
+              border: 1px solid #ccc;
+              background: #f8f8f8;
+              cursor: pointer;
+          }
+
+          .table-container {
+              overflow-x: auto;
+              width: 100%;
+          }
+
+          table {
+              width: 100%;
+              table-layout: auto;
+          }
+
+          th, td {
+              border: 1px solid #ddd;
+              padding: 8px;
+              text-align: left;
+              max-width: 150px;
+              overflow: hidden;
+              text-overflow: ellipsis;
+          }
+
+          th:nth-child(1), td:nth-child(1) { width: 8%; }
+          th:nth-child(2), td:nth-child(2) { width: 7%; }
+          th:nth-child(3), td:nth-child(3) { width: 10%; }
+          th:nth-child(4), td:nth-child(4) { width: 7%; }
+          th:nth-child(5), td:nth-child(5) { width: 7%; }
+          th:nth-child(6), td:nth-child(6) { width: 7%; }
+          th:nth-child(7), td:nth-child(7) { width: 7%; }
+          th:nth-child(8), td:nth-child(8) { width: 9%; }
+          th:nth-child(9), td:nth-child(9) { width: 9%; }
+          th:nth-child(10), td:nth-child(10) { width: 7%; }
+          th:nth-child(11), td:nth-child(11) { width: 7%; }
+          th:nth-child(12), td:nth-child(12) { width: 7%; }
+          th:nth-child(13), td:nth-child(13) { width: 5%; }
+          th:nth-child(14), td:nth-child(14) { width: 5%; }
+
+          @media (max-width: 1200px) {
+              th, td {
+                  font-size: 14px;
+                  padding: 6px;
+              }
+          }
+
+          @media (max-width: 800px) {
+              th, td {
+                  font-size: 12px;
+                  padding: 4px;
+              }
+          }
+          th {
+              background-color: #f2f2f2;
+              position: sticky;
+              top: 0;
+          }
+
+          .error-row {
+              background-color: #ffe6e6;
+          }
+
+          @media (max-width: 600px) {
+              .controls {
+                  flex-direction: column;
+                  align-items: flex-start;
+              }
+
+              .control-item {
+                  width: 100%;
+              }
+          }
+
+          .copy-button-container {
+              margin-top: 15px;
+              display: flex;
+              justify-content: flex-end;
+          }
+      </style>
+  </head>
+  <body>
+      <div class="container">
+          <div class="controls">
+              <button id="checkButton" class="control-item">Check Geolocation Timing</button>
+              <label class="control-item">
+                  <input type="checkbox" id="highAccuracy"> Enable High Accuracy
+              </label>
+              <label class="control-item">
+                  Max Age (ms):
+                  <input type="number" id="maxAge" value="0" min="0">
+              </label>
+              <label class="control-item">
+                  Timeout (ms):
+                  <input type="number" id="timeout" value="5000" min="0">
+              </label>
+          </div>
+          <div class="table-container">
+              <table id="resultsTable">
+                  <thead>
+                      <tr>
+                          <th>Timestamp</th>
+                          <th>Duration (ms)</th>
+                          <th>Status</th>
+                          <th>High Accuracy</th>
+                          <th>Max Age (ms)</th>
+                          <th>Timeout (ms)</th>
+                          <th>Cache Age (ms)</th>
+                          <th>Latitude</th>
+                          <th>Longitude</th>
+                          <th>Accuracy (meters)</th>
+                          <th>Altitude</th>
+                          <th>Altitude Accuracy</th>
+                          <th>Speed</th>
+                          <th>Heading</th>
+                      </tr>
+                  </thead>
+                  <tbody></tbody>
+              </table>
+          </div>
+          <div class="copy-button-container">
+              <button id="copyButton">Copy Table to Clipboard</button>
+          </div>
+      </div>
+  </body>
+</html>    
+      <script>
+          function createPendingRow() {
+              const tbody = document.querySelector('#resultsTable tbody');
+              const row = tbody.insertRow(0);
+              const timestamp = new Date().toLocaleTimeString();
+            
+              // Fill all cells with placeholder content
+              const pendingCells = [
+                  timestamp,
+                  'Pending...',
+                  'Waiting for response...',
+                  document.getElementById('highAccuracy').checked ? 'Yes' : 'No',
+                  document.getElementById('maxAge').value || 0,
+                  document.getElementById('timeout').value || 'Infinite',
+                  'Pending...',
+                  'Pending...',
+                  'Pending...',
+                  'Pending...',
+                  'Pending...',
+                  'Pending...',
+                  'Pending...',
+                  'Pending...'
+              ];
+
+              pendingCells.forEach(cellData => {
+                  const cell = row.insertCell();
+                  cell.textContent = cellData;
+              });
+
+              return row;
+          }
+
+          document.getElementById('copyButton').addEventListener('click', () => {
+              const table = document.getElementById('resultsTable');
+              let text = '';
+          
+              const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent);
+              text += headers.join('\t') + '\n';
+          
+              const rows = table.querySelectorAll('tbody tr');
+              rows.forEach(row => {
+                  const cells = Array.from(row.querySelectorAll('td')).map(td => td.textContent);
+                  text += cells.join('\t') + '\n';
+              });
+          
+              navigator.clipboard.writeText(text)
+                  .then(() => alert('Table copied to clipboard!'))
+                  .catch(err => console.error('Failed to copy:', err));
+          });
+
+          document.getElementById('checkButton').addEventListener('click', () => {
+              const startTime = performance.now();
+              const pendingRow = createPendingRow();
+            
+              const options = {
+                enableHighAccuracy: document.getElementById('highAccuracy').checked,
+                maximumAge: parseInt(document.getElementById('maxAge').value) || 0
+              };
+
+              // Only add timeout if a value is provided
+              const timeoutValue = document.getElementById('timeout').value;
+              if (timeoutValue.trim() !== '') {
+                  options.timeout = parseInt(timeoutValue);
+              }
+            
+              navigator.geolocation.getCurrentPosition(
+                  position => {
+                      const endTime = performance.now();
+                      const duration = endTime - startTime;
+                      const cacheAge = Date.now() - position.timestamp;
+                      const coords = position.coords;
+
+                      // Update the existing row cells
+                      const cells = pendingRow.cells;
+                      cells[1].textContent = duration.toFixed(2);
+                      cells[2].textContent = 'Success';
+                      cells[6].textContent = cacheAge;
+                      cells[7].textContent = coords.latitude;
+                      cells[8].textContent = coords.longitude;
+                      cells[9].textContent = coords.accuracy;
+                      cells[10].textContent = coords.altitude || 'N/A';
+                      cells[11].textContent = coords.altitudeAccuracy || 'N/A';
+                      cells[12].textContent = coords.speed || 'N/A';
+                      cells[13].textContent = coords.heading || 'N/A';
+
+                      console.log('Full position object:', position);
+                  },
+                  error => {
+                      const endTime = performance.now();
+                      const duration = endTime - startTime;
+                    
+                      let errorMessage;
+                      switch(error.code) {
+                          case error.PERMISSION_DENIED:
+                              errorMessage = 'Permission Denied';
+                              break;
+                          case error.POSITION_UNAVAILABLE:
+                              errorMessage = 'Position Unavailable';
+                              break;
+                          case error.TIMEOUT:
+                              errorMessage = 'Timeout';
+                              break;
+                          default:
+                              errorMessage = 'Unknown Error';
+                      }
+
+                      // Update the existing row cells for error case
+                      const cells = pendingRow.cells;
+                      cells[1].textContent = duration.toFixed(2);
+                      cells[2].textContent = `Error: ${errorMessage}`;
+                      pendingRow.classList.add('error-row');
+
+                      // Set remaining cells to N/A
+                      for(let i = 6; i < cells.length; i++) {
+                          cells[i].textContent = 'N/A';
+                      }
+
+                      console.log('Error:', error);
+                  },
+                  options
+              );
+          });      
+      </script>
+  </body>
+  </html>
